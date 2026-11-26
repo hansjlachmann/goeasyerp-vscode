@@ -57,6 +57,26 @@
   "contributes": {
     "commands": [
       {
+        "command": "goeasyerp.createContainer",
+        "title": "%command.createContainer%",
+        "category": "GoEasyERP"
+      },
+      {
+        "command": "goeasyerp.startContainer",
+        "title": "%command.startContainer%",
+        "category": "GoEasyERP"
+      },
+      {
+        "command": "goeasyerp.stopContainer",
+        "title": "%command.stopContainer%",
+        "category": "GoEasyERP"
+      },
+      {
+        "command": "goeasyerp.removeContainer",
+        "title": "%command.removeContainer%",
+        "category": "GoEasyERP"
+      },
+      {
         "command": "goeasyerp.showOutput",
         "title": "%command.showOutput%",
         "category": "GoEasyERP"
@@ -70,7 +90,8 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "vscode:prepublish": "node esbuild.mjs --production",
-    "package": "vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies",
+    "test:integration": "vitest run --config vitest.integration.config.mts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

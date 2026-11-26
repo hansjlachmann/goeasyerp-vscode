@@ -2,5 +2,9 @@
   "extension.displayName": "GoEasyERP",
   "extension.description": "Write GoEasyERP extension apps, compile them, and publish them to a local development container.",
   "capabilities.untrustedWorkspaces": "The extension builds and publishes the code of the open folder, so the folder must be trusted.",
-  "command.showOutput": "Show Output"
+  "command.showOutput": "Show Output",
+  "command.createContainer": "Create Local Container",
+  "command.startContainer": "Start Local Container",
+  "command.stopContainer": "Stop Local Container",
+  "command.removeContainer": "Remove Local Container"
 }

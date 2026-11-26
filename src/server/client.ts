@@ -1,0 +1,101 @@
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
+
+export interface ServerVersion {
+  version: string;
+  build: number;
+}
+
+export class ServerError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+interface Response {
+  status: number;
+  body: unknown;
+}
+
+const TIMEOUT = 15_000;
+
+/**
+ * The server's API. It uses Node's HTTP client, which sends no Origin header: the server's
+ * cross-site check lets such requests through.
+ */
+export class ServerClient {
+  constructor(private readonly server: string) {}
+
+  async version(signal?: AbortSignal): Promise<ServerVersion> {
+    const { status, body } = await this.send('GET', '/api/version', undefined, signal);
+    const value = body as Partial<ServerVersion> | undefined;
+    if (status !== 200 || typeof value?.version !== 'string' || typeof value.build !== 'number') {
+      throw new ServerError(`HTTP ${status}`, status);
+    }
+    return { version: value.version, build: value.build };
+  }
+
+  async createFirstUser(user: {
+    user_id: string;
+    user_name: string;
+    password: string;
+    setup_token: string;
+  }): Promise<void> {
+    await this.post('/api/auth/init', user);
+  }
+
+  /** Sends a JSON request and returns the answer's data; throws the server's error. */
+  async post(path: string, payload: unknown, signal?: AbortSignal): Promise<unknown> {
+    const { status, body } = await this.send('POST', path, payload, signal);
+    const answer = body as { success?: boolean; data?: unknown; error?: string } | undefined;
+    if (status !== 200 || !answer?.success) {
+      throw new ServerError(answer?.error ?? `HTTP ${status}`, status);
+    }
+    return answer.data;
+  }
+
+  private send(
+    method: string,
+    path: string,
+    payload: unknown,
+    signal: AbortSignal | undefined,
+  ): Promise<Response> {
+    const url = new URL(path, this.server);
+    const send = url.protocol === 'https:' ? httpsRequest : httpRequest;
+    const data = payload === undefined ? undefined : Buffer.from(JSON.stringify(payload));
+    const headers: Record<string, string | number> = { Accept: 'application/json' };
+    if (data) {
+      headers['Content-Type'] = 'application/json';
+      headers['Content-Length'] = data.length;
+    }
+    const timeout = AbortSignal.timeout(TIMEOUT);
+    return new Promise((resolve, reject) => {
+      const request = send(
+        url,
+        { method, headers, signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
+        (response) => {
+          let text = '';
+          response.setEncoding('utf8');
+          response.on('data', (chunk: string) => (text += chunk));
+          response.on('error', reject);
+          response.on('end', () => {
+            resolve({ status: response.statusCode ?? 0, body: parseJson(text) });
+          });
+        },
+      );
+      request.on('error', reject);
+      request.end(data);
+    });
+  }
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined; // for example the error page of a server that is starting
+  }
+}
