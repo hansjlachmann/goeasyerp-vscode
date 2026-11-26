@@ -20,6 +20,14 @@ interface Response {
   body: unknown;
 }
 
+/** An app installed on a server, with its number series as text ("50000–50099, …"). */
+export interface InstalledApp {
+  object_series?: string;
+  field_series?: string;
+}
+
+const SESSION_COOKIE = 'openerp_session';
+
 const TIMEOUT = 15_000;
 
 /**
@@ -27,6 +35,8 @@ const TIMEOUT = 15_000;
  * cross-site check lets such requests through.
  */
 export class ServerClient {
+  private session: string | undefined;
+
   constructor(private readonly server: string) {}
 
   async version(signal?: AbortSignal): Promise<ServerVersion> {
@@ -47,9 +57,23 @@ export class ServerClient {
     await this.post('/api/auth/init', user);
   }
 
+  /** Logs in; the session cookie is kept in memory for the following requests. */
+  async login(user: string, password: string, company: string): Promise<void> {
+    await this.post('/api/auth/login', { user_id: user, password, company });
+  }
+
+  /** The apps installed on the server, the base application among them. Needs a login. */
+  async installedApps(signal?: AbortSignal): Promise<InstalledApp[]> {
+    const response = await this.send('GET', '/api/tables/Installed_App/list', undefined, signal);
+    return (this.data(response) as { records?: InstalledApp[] }).records ?? [];
+  }
+
   /** Sends a JSON request and returns the answer's data; throws the server's error. */
   async post(path: string, payload: unknown, signal?: AbortSignal): Promise<unknown> {
-    const { status, body } = await this.send('POST', path, payload, signal);
+    return this.data(await this.send('POST', path, payload, signal));
+  }
+
+  private data({ status, body }: Response): unknown {
     const answer = body as { success?: boolean; data?: unknown; error?: string } | undefined;
     if (status !== 200 || !answer?.success) {
       throw new ServerError(answer?.error ?? `HTTP ${status}`, status);
@@ -67,6 +91,9 @@ export class ServerClient {
     const send = url.protocol === 'https:' ? httpsRequest : httpRequest;
     const data = payload === undefined ? undefined : Buffer.from(JSON.stringify(payload));
     const headers: Record<string, string | number> = { Accept: 'application/json' };
+    if (this.session) {
+      headers.Cookie = this.session;
+    }
     if (data) {
       headers['Content-Type'] = 'application/json';
       headers['Content-Length'] = data.length;
@@ -82,6 +109,9 @@ export class ServerClient {
           response.on('data', (chunk: string) => (text += chunk));
           response.on('error', reject);
           response.on('end', () => {
+            const cookies = response.headers['set-cookie'] ?? [];
+            const session = cookies.find((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
+            this.session = session?.split(';')[0] ?? this.session;
             resolve({ status: response.statusCode ?? 0, body: parseJson(text) });
           });
         },

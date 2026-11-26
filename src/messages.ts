@@ -60,6 +60,40 @@ export const messages = {
   containerDetail: (version: string, server: string) => `base ${version}, ${server}`,
   state: { running: 'running', stopped: 'stopped', absent: 'not running' },
 
+  required: 'Enter a value.',
+  appName: 'Name of the new app',
+  appPublisher: "The app's publisher",
+  appContact: 'A web address or e-mail address to reach the publisher',
+  appPrefix: "Prefix of the app's own names",
+  badPrefix: '2 to 10 lower case letters and digits, starting with a letter.',
+  appParent: (folder: string) => `Folder to create "${folder}" in`,
+  appParentButton: 'Create Here',
+  folderNotEmpty: (folder: string) => `The folder ${folder} is not empty.`,
+  appCreated: (folder: string, from: number, to: number) =>
+    `The app is in ${folder}, with the numbers ${from} to ${to}.`,
+  openFolder: 'Open',
+  openNewWindow: 'Open in New Window',
+
+  noApp: 'No GoEasyERP app is open: no application.yaml that depends on the base application.',
+  offerDownload: 'Download the base for code completion in this GoEasyERP app?',
+  downloadBase: 'Download Base',
+  preparingBase: (version: string) => `Base ${version}`,
+  baseReady: (version: string) => `The base ${version} with the app is ready.`,
+  step: {
+    source: 'Downloading the base',
+    go: 'Preparing Go',
+    copy: 'Copying the base',
+    merge: 'Merging the app',
+    generate: 'Generating the table code',
+  },
+  pickBaseVersion: 'Base version the app is built against',
+  serverUnreachable: (server: string) => `${server} does not answer.`,
+  serverTooOld: (server: string, version: string, minimum: string) =>
+    `${server} runs ${version}; ${minimum} or newer is needed.`,
+  appErrors: 'The app could not be merged into the base. See the Problems panel.',
+  terminalPath: (version: string) =>
+    `Adds Go ${version}, which the base is built with, to the PATH.`,
+
   confirmRemove: (project: string) => `Remove the container ${project}?`,
   confirmRemoveDetail: 'This deletes its database. It cannot be undone.',
   remove: 'Remove',

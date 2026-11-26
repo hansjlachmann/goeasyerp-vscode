@@ -92,13 +92,16 @@ export class ContainerCommands {
 
     let container: Container | undefined;
     try {
-      await this.withProgress(messages.creating(`GoEasyERP ${version}`), async (report, progress) => {
-        report(messages.downloadingFiles);
-        container = await this.manager.prepare(version, port, progress.signal);
-        report(messages.startingContainer);
-        await this.manager.start(container, progress);
-        report(messages.creatingUser);
-      });
+      await this.withProgress(
+        messages.creating(`GoEasyERP ${version}`),
+        async (report, progress) => {
+          report(messages.downloadingFiles);
+          container = await this.manager.prepare(version, port, progress.signal);
+          report(messages.startingContainer);
+          await this.manager.start(container, progress);
+          report(messages.creatingUser);
+        },
+      );
     } catch (error) {
       this.reportIncomplete(container, error);
       return;

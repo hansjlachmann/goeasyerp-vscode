@@ -7,6 +7,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { freeSeries, parseSeries } from '../../src/app/series';
 import { Docker } from '../../src/container/docker';
 import { ContainerManager, FIRST_USER } from '../../src/container/manager';
 import { findFreePort } from '../../src/container/ports';
@@ -54,6 +55,16 @@ describe(`a development container of base ${version}`, () => {
     await manager.createFirstUser(container, password);
     await expect(login()).resolves.toBeDefined();
     expect((await manager.store.list())[0]?.userCreated).toBe(true);
+  });
+
+  it('tells which numbers its apps use', async () => {
+    const server = client();
+    await server.login(FIRST_USER, password, 'main');
+    const used = (await server.installedApps()).flatMap((app) =>
+      parseSeries(`${app.object_series}, ${app.field_series}`),
+    );
+    expect(used).toContainEqual({ from: 1, to: 999 });
+    expect(freeSeries(used)).toEqual({ from: 50000, to: 50099 });
   });
 
   it('stops', async () => {

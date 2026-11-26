@@ -33,6 +33,10 @@ installed together with this one.
 The first publish to a new container takes about two minutes. After that, a change of the app's
 code is live in about 15 seconds.
 
+In the app's folder the extension keeps its downloads in `.goeasyerp/`, writes `go.work`, and,
+when it provides Go, sets `go.goroot` in the workspace settings. A new app's `.gitignore` leaves
+all three out of your repository.
+
 ## Commands and keys
 
 | Command or key | Does |

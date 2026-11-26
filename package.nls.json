@@ -6,5 +6,7 @@
   "command.createContainer": "Create Local Container",
   "command.startContainer": "Start Local Container",
   "command.stopContainer": "Stop Local Container",
-  "command.removeContainer": "Remove Local Container"
+  "command.removeContainer": "Remove Local Container",
+  "command.newApp": "New App",
+  "command.downloadBase": "Download Base"
 }

@@ -35,6 +35,7 @@
   "main": "./dist/extension.js",
   "files": [
     "dist/extension.js",
+    "dist/ThirdPartyNotices.txt",
     "media/icon.png",
     "package.nls.json",
     "LICENSE",
@@ -77,6 +78,16 @@
         "category": "GoEasyERP"
       },
       {
+        "command": "goeasyerp.newApp",
+        "title": "%command.newApp%",
+        "category": "GoEasyERP"
+      },
+      {
+        "command": "goeasyerp.downloadBase",
+        "title": "%command.downloadBase%",
+        "category": "GoEasyERP"
+      },
+      {
         "command": "goeasyerp.showOutput",
         "title": "%command.showOutput%",
         "category": "GoEasyERP"
@@ -97,6 +108,7 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.20.7",
     "@types/vscode": "~1.136.0",
+    "@types/yauzl": "^3.4.0",
     "@vscode/vsce": "^4.1.1",
     "esbuild": "^0.28.2",
     "eslint": "^10.15.0",
@@ -104,5 +116,10 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.74.0",
     "vitest": "^5.1.2"
+  },
+  "dependencies": {
+    "tar": "^7.5.23",
+    "yaml": "^2.9.1",
+    "yauzl": "^3.4.0"
   }
 }
