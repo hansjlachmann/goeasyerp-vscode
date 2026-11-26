@@ -1,0 +1,87 @@
+{
+  "name": "goeasyerp",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
+  "version": "0.0.0",
+  "publisher": "erp-development",
+  "author": "ERP Development AS",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hansjlachmann/goeasyerp-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hansjlachmann/goeasyerp-vscode/issues"
+  },
+  "homepage": "https://github.com/hansjlachmann/goeasyerp-vscode#readme",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1F2933",
+    "theme": "dark"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "goeasyerp",
+    "erp",
+    "go"
+  ],
+  "engines": {
+    "vscode": "^1.136.0"
+  },
+  "main": "./dist/extension.js",
+  "files": [
+    "dist/extension.js",
+    "media/icon.png",
+    "package.nls.json",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/application.yaml"
+  ],
+  "extensionDependencies": [
+    "golang.go",
+    "redhat.vscode-yaml"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "%capabilities.untrustedWorkspaces%"
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "goeasyerp.showOutput",
+        "title": "%command.showOutput%",
+        "category": "GoEasyERP"
+      }
+    ]
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "vscode:prepublish": "node esbuild.mjs --production",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.7",
+    "@types/vscode": "~1.136.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.74.0",
+    "vitest": "^5.1.2"
+  }
+}
