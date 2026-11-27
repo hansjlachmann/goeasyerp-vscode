@@ -43,7 +43,7 @@ export class ServerClient {
     const { status, body } = await this.send('GET', '/api/version', undefined, signal);
     const value = body as Partial<ServerVersion> | undefined;
     if (status !== 200 || typeof value?.version !== 'string' || typeof value.build !== 'number') {
-      throw new ServerError(`HTTP ${status}`, status);
+      throw new ServerError(`Unexpected answer to /api/version (HTTP ${status})`, status);
     }
     return { version: value.version, build: value.build };
   }
@@ -104,14 +104,16 @@ export class ServerClient {
         url,
         { method, headers, signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
         (response) => {
-          let text = '';
-          response.setEncoding('utf8');
-          response.on('data', (chunk: string) => (text += chunk));
+          // Bytes, decoded at the end: with setEncoding, Node's network inspection (on while
+          // the extension is debugged) throws on every chunk, and the answer is lost.
+          const chunks: Buffer[] = [];
+          response.on('data', (chunk: Buffer) => chunks.push(chunk));
           response.on('error', reject);
           response.on('end', () => {
             const cookies = response.headers['set-cookie'] ?? [];
             const session = cookies.find((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
             this.session = session?.split(';')[0] ?? this.session;
+            const text = Buffer.concat(chunks).toString('utf8');
             resolve({ status: response.statusCode ?? 0, body: parseJson(text) });
           });
         },
