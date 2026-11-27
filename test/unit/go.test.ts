@@ -100,6 +100,26 @@ describe('managed Go', () => {
     });
   });
 
+  it('knows its own download when that is the Go on the PATH', async () => {
+    const store = join(root, 'go');
+    const own = join(store, '1.26.11', 'go');
+    let onPath = false;
+    const run: Runner = (_command, args) =>
+      onPath
+        ? Promise.resolve({
+            code: 0,
+            stdout: args[0] === 'version' ? 'go version go1.26.11 linux/amd64\n' : `${own}\n`,
+            stderr: '',
+          })
+        : noGo(_command, args);
+    const toolchains = new GoToolchains(store, run, fetching(() => sha256), linux);
+    const first = await toolchains.ensure('1.26.11');
+    onPath = true;
+
+    expect(await toolchains.ensure('1.26.11')).toEqual(first);
+    expect(first).toMatchObject({ goroot: own, managed: true });
+  });
+
   it('downloads it otherwise, and keeps two versions', async () => {
     const store = join(root, 'go');
     const toolchains = new GoToolchains(

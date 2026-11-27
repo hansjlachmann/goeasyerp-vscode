@@ -1,5 +1,5 @@
 import { access, mkdir, mkdtemp, readdir, rename, rm } from 'node:fs/promises';
-import { delimiter, join } from 'node:path';
+import { delimiter, isAbsolute, join, relative } from 'node:path';
 import { extract } from 'tar';
 import { downloadFile, type DownloadOptions } from '../download';
 import type { Runner } from '../runner';
@@ -104,7 +104,9 @@ export class GoToolchains {
       throw new Error(`Not a Go version: ${version}`);
     }
     const installed = await this.onPath(version);
-    if (installed) {
+    // The Go extension puts the go.goroot it is given on the PATH: a downloaded version found
+    // there is still ours, not the developer's.
+    if (installed && !isInside(this.root, installed)) {
       return { version, goroot: installed, managed: false };
     }
     const goroot = join(this.root, version, 'go');
@@ -167,6 +169,11 @@ export class GoToolchains {
       await rm(join(this.root, version), { recursive: true, force: true });
     }
   }
+}
+
+function isInside(folder: string, path: string): boolean {
+  const way = relative(folder, path);
+  return !way.startsWith('..') && !isAbsolute(way);
 }
 
 async function exists(path: string): Promise<boolean> {
