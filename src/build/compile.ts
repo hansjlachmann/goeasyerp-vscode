@@ -1,12 +1,13 @@
 import { access } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { appDirectory } from '../app/application';
+import type { Problem } from '../base/problems';
 import type { BaseWorkspace, SyncOptions, SyncResult } from '../base/workspace';
 import { goEnvironment } from '../go/toolchain';
 import { messages } from '../messages';
 import type { Runner } from '../runner';
 import { readAudit, type Finding } from './audit';
-import { relativeToWorkspace } from './goOutput';
+import { goProblems, relativeToWorkspace } from './goOutput';
 import { writePackage } from './package';
 
 export interface CompileOptions extends Omit<SyncOptions, 'onOutput'> {
@@ -20,6 +21,8 @@ export interface CompileResult {
   /** The package's path; undefined when the app has errors. */
   package: string | undefined;
   findings: Finding[];
+  /** Go's errors, for those who run no problem matcher over the output. */
+  goProblems: Problem[];
 }
 
 /**
@@ -54,6 +57,7 @@ export function compile(
       });
 
     let built = true;
+    const problems: Problem[] = [];
     if (await exists(join(directory, 'go.mod'))) {
       for (const command of ['build', 'vet']) {
         write(`go ${command} ./...`);
@@ -61,7 +65,9 @@ export function compile(
         const result = await go([command, './...'], directory, { GOWORK: '' });
         const output = `${result.stdout}${result.stderr}`.trim();
         if (output) {
-          write(relativeToWorkspace(output, root, directory));
+          const shown = relativeToWorkspace(output, root, directory);
+          problems.push(...goProblems(shown, root));
+          write(shown);
         }
         if (result.code !== 0) {
           built = false;
@@ -90,11 +96,11 @@ export function compile(
     notes.forEach(write);
 
     if (!built || findings.some((finding) => !finding.excepted)) {
-      return { package: undefined, findings };
+      return { package: undefined, findings, goProblems: problems };
     }
     const path = await writePackage(root, directory);
     write(messages.packaged(relative(root, path)));
-    return { package: path, findings };
+    return { package: path, findings, goProblems: problems };
   });
 }
 

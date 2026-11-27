@@ -1,4 +1,5 @@
 import { isAbsolute, join, relative } from 'node:path';
+import type { Problem } from '../base/problems';
 
 const LOCATION = /^(vet: )?(.+?\.(?:go|mod|work))(:\d+(?::\d+)?: .*)$/;
 
@@ -21,4 +22,16 @@ export function relativeToWorkspace(output: string, root: string, appDirectory: 
       return `${vet}${shown}${rest}`;
     })
     .join('\n');
+}
+
+/** The places in Go's output, as relativeToWorkspace writes it. */
+export function goProblems(output: string, root: string): Problem[] {
+  return output.split('\n').flatMap((line) => {
+    const match = /^(?:vet: )?(.+?\.(?:go|mod|work)):(\d+)(?::\d+)?: (.*)$/.exec(line);
+    if (!match) {
+      return [];
+    }
+    const [, file = '', row, message = ''] = match;
+    return [{ file: isAbsolute(file) ? file : join(root, file), line: Number(row), message }];
+  });
 }

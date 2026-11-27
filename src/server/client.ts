@@ -26,9 +26,51 @@ export interface InstalledApp {
   field_series?: string;
 }
 
+/** A build the server was asked for. */
+export interface Requested {
+  build_no: number;
+}
+
+export interface Build {
+  status: string;
+  done: boolean;
+  error_message: string;
+  /** The log from the byte asked for. */
+  log: string;
+  /** Where the next request for the log starts. */
+  log_size: number;
+}
+
+/** A finding of the server's app audit; the file is relative to the app's folder. */
+export interface ServerFinding {
+  rule?: string;
+  file?: string;
+  line?: number;
+  key?: string;
+  detail?: string;
+  excepted?: boolean;
+}
+
+/** The server's app audit refused the package. */
+export class AuditRefused extends ServerError {
+  constructor(
+    message: string,
+    readonly findings: ServerFinding[],
+  ) {
+    super(message, 422);
+  }
+}
+
+interface Body {
+  type: string;
+  data: Buffer;
+}
+
 const SESSION_COOKIE = 'openerp_session';
 
 const TIMEOUT = 15_000;
+// The server unpacks and audits a package before it answers.
+const PUBLISH_TIMEOUT = 120_000;
 
 /**
  * The server's API. It uses Node's HTTP client, which sends no Origin header: the server's
@@ -68,9 +110,39 @@ export class ServerClient {
     return (this.data(response) as { records?: InstalledApp[] }).records ?? [];
   }
 
+  /** Publishes an app's package on a development server. Needs a login. */
+  async publish(zip: Buffer, signal?: AbortSignal): Promise<Requested> {
+    const response = await this.send(
+      'POST',
+      '/api/dev/apps',
+      { type: 'application/zip', data: zip },
+      signal,
+      PUBLISH_TIMEOUT,
+    );
+    const answer = response.body as
+      { error?: string; data?: { findings?: ServerFinding[] | null } } | undefined;
+    if (response.status === 422) {
+      throw new AuditRefused(answer?.error ?? 'HTTP 422', answer?.data?.findings ?? []);
+    }
+    return this.data(response) as Requested;
+  }
+
+  async unpublish(appId: string, signal?: AbortSignal): Promise<Requested> {
+    const path = `/api/dev/apps/${encodeURIComponent(appId)}`;
+    return this.data(
+      await this.send('DELETE', path, undefined, signal, PUBLISH_TIMEOUT),
+    ) as Requested;
+  }
+
+  /** A build's state, with its log from the byte `from`. */
+  async build(no: number, from: number, signal?: AbortSignal): Promise<Build> {
+    const path = `/api/dev/builds/${no}?from=${from}`;
+    return this.data(await this.send('GET', path, undefined, signal)) as Build;
+  }
+
   /** Sends a JSON request and returns the answer's data; throws the server's error. */
   async post(path: string, payload: unknown, signal?: AbortSignal): Promise<unknown> {
-    return this.data(await this.send('POST', path, payload, signal));
+    return this.data(await this.send('POST', path, json(payload), signal));
   }
 
   private data({ status, body }: Response): unknown {
@@ -84,21 +156,21 @@ export class ServerClient {
   private send(
     method: string,
     path: string,
-    payload: unknown,
+    body: Body | undefined,
     signal: AbortSignal | undefined,
+    limit = TIMEOUT,
   ): Promise<Response> {
     const url = new URL(path, this.server);
     const send = url.protocol === 'https:' ? httpsRequest : httpRequest;
-    const data = payload === undefined ? undefined : Buffer.from(JSON.stringify(payload));
     const headers: Record<string, string | number> = { Accept: 'application/json' };
     if (this.session) {
       headers.Cookie = this.session;
     }
-    if (data) {
-      headers['Content-Type'] = 'application/json';
-      headers['Content-Length'] = data.length;
+    if (body) {
+      headers['Content-Type'] = body.type;
+      headers['Content-Length'] = body.data.length;
     }
-    const timeout = AbortSignal.timeout(TIMEOUT);
+    const timeout = AbortSignal.timeout(limit);
     return new Promise((resolve, reject) => {
       const request = send(
         url,
@@ -118,10 +190,17 @@ export class ServerClient {
           });
         },
       );
-      request.on('error', reject);
-      request.end(data);
+      request.on('error', (error) => {
+        const slow = timeout.aborted && !signal?.aborted;
+        reject(slow ? new Error(`${url.host} did not answer in time`, { cause: error }) : error);
+      });
+      request.end(body?.data);
     });
   }
+}
+
+function json(payload: unknown): Body {
+  return { type: 'application/json', data: Buffer.from(JSON.stringify(payload)) };
 }
 
 function parseJson(text: string): unknown {

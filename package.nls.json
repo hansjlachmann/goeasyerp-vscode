@@ -11,5 +11,14 @@
   "command.downloadBase": "Download Base",
   "command.compile": "Compile",
   "command.packageApp": "Package App",
-  "task.compile": "compile: build, check and package the app on this computer"
+  "task.compile": "compile: build, check and package the app on this computer",
+  "command.unpublishApp": "Unpublish App",
+  "launch.server": "The address of the development server.",
+  "launch.company": "The company to log in to.",
+  "launch.user": "The user who publishes; needs the SUPER role. The password is asked for and kept in the secret storage.",
+  "launch.startupPageId": "The page the browser opens after a publish.",
+  "launch.openBrowser": "Whether F5 opens the browser.",
+  "launch.schemaUpdateMode": "synchronize adds new tables and fields. recreate is not available yet.",
+  "debugger.label": "GoEasyERP",
+  "debugger.snippet": "Publish the app to a GoEasyERP development server."
 }

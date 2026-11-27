@@ -43,7 +43,9 @@
   ],
   "activationEvents": [
     "workspaceContains:**/application.yaml",
-    "onTaskType:goeasyerp"
+    "onTaskType:goeasyerp",
+    "onDebugResolve:goeasyerp",
+    "onDebugInitialConfigurations"
   ],
   "extensionDependencies": [
     "golang.go",
@@ -99,6 +101,11 @@
         "category": "GoEasyERP"
       },
       {
+        "command": "goeasyerp.unpublishApp",
+        "title": "%command.unpublishApp%",
+        "category": "GoEasyERP"
+      },
+      {
         "command": "goeasyerp.showOutput",
         "title": "%command.showOutput%",
         "category": "GoEasyERP"
@@ -119,6 +126,87 @@
             "description": "%task.compile%"
           }
         }
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "goeasyerp",
+        "label": "%debugger.label%",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "server",
+              "user"
+            ],
+            "properties": {
+              "server": {
+                "type": "string",
+                "default": "http://localhost:8080",
+                "description": "%launch.server%"
+              },
+              "company": {
+                "type": "string",
+                "default": "main",
+                "description": "%launch.company%"
+              },
+              "user": {
+                "type": "string",
+                "default": "ADMIN",
+                "description": "%launch.user%"
+              },
+              "startupPageId": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 22,
+                "description": "%launch.startupPageId%"
+              },
+              "openBrowser": {
+                "type": "boolean",
+                "default": true,
+                "description": "%launch.openBrowser%"
+              },
+              "schemaUpdateMode": {
+                "type": "string",
+                "enum": [
+                  "synchronize",
+                  "recreate"
+                ],
+                "default": "synchronize",
+                "description": "%launch.schemaUpdateMode%"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "goeasyerp",
+            "request": "launch",
+            "name": "Local container",
+            "server": "http://localhost:8080",
+            "company": "main",
+            "user": "ADMIN",
+            "startupPageId": 22,
+            "openBrowser": true,
+            "schemaUpdateMode": "synchronize"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "%debugger.label%",
+            "description": "%debugger.snippet%",
+            "body": {
+              "type": "goeasyerp",
+              "request": "launch",
+              "name": "Local container",
+              "server": "http://localhost:8080",
+              "company": "main",
+              "user": "ADMIN",
+              "startupPageId": 22,
+              "openBrowser": true,
+              "schemaUpdateMode": "synchronize"
+            }
+          }
+        ]
       }
     ]
   },

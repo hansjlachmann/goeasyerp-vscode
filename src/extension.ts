@@ -4,6 +4,7 @@ import { BaseCommands } from './commands/base';
 import { CompileCommands } from './commands/compile';
 import { ContainerCommands } from './commands/containers';
 import { NewAppCommand } from './commands/newApp';
+import { PublishCommands } from './commands/publish';
 import { Docker } from './container/docker';
 import { ContainerManager } from './container/manager';
 import { ContainerStore } from './container/store';
@@ -26,13 +27,16 @@ export function activate(context: vscode.ExtensionContext): void {
     output,
   );
 
+  const compiler = new CompileCommands(base, run, output);
+
   context.subscriptions.push(
     output,
     vscode.commands.registerCommand('goeasyerp.showOutput', () => output.show()),
     ...containers.register(),
     new NewAppCommand(manager, context.secrets).register(),
     ...base.register(),
-    ...new CompileCommands(base, run, output).register(),
+    ...compiler.register(),
+    ...new PublishCommands(base, compiler, context.secrets, output).register(),
   );
   // Not awaited: it downloads, and activation must not wait for that.
   void base.activate();

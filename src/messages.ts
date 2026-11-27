@@ -104,6 +104,30 @@ export const messages = {
   packageWritten: (path: string) => `The package is in ${path}.`,
   reveal: 'Show in File Manager',
 
+  badSetting: (name: string) => `The launch configuration's "${name}" cannot be used.`,
+  noRecreate:
+    'schemaUpdateMode "recreate" is not available yet. Use "synchronize", which adds new tables and fields.',
+  connecting: (server: string) => `Connecting to ${server}`,
+  loginPassword: (user: string, server: string) => `Password of ${user} on ${server}`,
+  compiling: 'Compiling',
+  uploading: 'Publishing',
+  building: (step: string) => `Building… ${step}`,
+  switching: 'Waiting for the server to run the build',
+  buildFailed: (no: number, status: string, reason: string) =>
+    `Build ${no} ${status.toLowerCase()}${reason ? `: ${reason}` : '.'}`,
+  notLive: 'The build succeeded, but the server did not start to run it.',
+  notDevelopmentServer:
+    'This is not a development server: it takes no apps from VS Code. Use a local container, or install the app as a package.',
+  published: (no: number, server: string) => `Build ${no} is live on ${server}.`,
+  publishStopped: 'Stopped waiting. A build the server has started still runs.',
+  publishBusy: 'A publish is running. Wait until it has finished.',
+  unpublish: 'Unpublish',
+  confirmUnpublish: (app: string, server: string) => `Unpublish ${app} from ${server}?`,
+  unpublished: (app: string, no: number) => `${app} is unpublished (build ${no}).`,
+  noAppId: 'application.yaml has no id.',
+  pickConfiguration: 'Server to unpublish from',
+  openBrowser: 'Open in Browser',
+
   confirmRemove: (project: string) => `Remove the container ${project}?`,
   confirmRemoveDetail: 'This deletes its database. It cannot be undone.',
   remove: 'Remove',

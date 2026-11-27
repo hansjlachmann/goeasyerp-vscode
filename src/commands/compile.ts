@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { appDirectory } from '../app/application';
-import { compile } from '../build/compile';
+import { AppError, type Problem } from '../base/problems';
+import type { BaseWorkspace } from '../base/workspace';
+import { compile, type CompileOptions, type CompileResult } from '../build/compile';
 import type { Finding } from '../build/audit';
 import { writePackage } from '../build/package';
 import { messages } from '../messages';
@@ -15,16 +17,18 @@ const MATCHERS = ['$go'];
 /** The compile task (Ctrl+Shift+B) and the commands to compile and package. */
 export class CompileCommands implements vscode.TaskProvider {
   private readonly audit = vscode.languages.createDiagnosticCollection('goeasyerp-audit');
+  private readonly go = vscode.languages.createDiagnosticCollection('goeasyerp-go');
 
   constructor(
     private readonly base: BaseCommands,
-    private readonly run: Runner,
+    private readonly runner: Runner,
     private readonly output: vscode.OutputChannel,
   ) {}
 
   register(): vscode.Disposable[] {
     return [
       this.audit,
+      this.go,
       vscode.tasks.registerTaskProvider(TYPE, this),
       vscode.commands.registerCommand('goeasyerp.compile', () => this.start()),
       vscode.commands.registerCommand('goeasyerp.packageApp', () => this.package()),
@@ -85,24 +89,53 @@ export class CompileCommands implements vscode.TaskProvider {
     };
   }
 
-  private async compile(write: (text: string) => void, signal: AbortSignal): Promise<boolean> {
+  /** Compiles the app and shows the audit's findings. */
+  async run(
+    workspace: BaseWorkspace,
+    version: string,
+    options: Pick<CompileOptions, 'signal' | 'write'>,
+    /** Whether to list Go's errors too: a task's problem matcher does that itself. */
+    listGo = true,
+  ): Promise<CompileResult> {
     this.audit.clear();
+    this.go.clear();
+    try {
+      const result = await compile(workspace, version, this.runner, {
+        ...options,
+        onBase: (base) => this.base.apply(workspace, base),
+      });
+      this.showFindings(result.findings);
+      if (listGo) {
+        this.show(this.go, 'go', result.goProblems);
+      }
+      return result;
+    } catch (error) {
+      // errors of the merge belong to the app's definitions
+      if (error instanceof AppError) {
+        this.base.report(error);
+      }
+      throw error;
+    }
+  }
+
+  showFindings(findings: Finding[]): void {
+    this.show(this.audit, 'GoEasyERP audit', findings);
+  }
+
+  private async compile(write: (text: string) => void, signal: AbortSignal): Promise<boolean> {
     try {
       const target = await this.base.target();
       if (!target) {
         return false;
       }
-      const result = await compile(target.workspace, target.version, this.run, {
-        signal,
-        write,
-        onBase: (base) => this.base.apply(target.workspace, base),
-      });
-      this.show(result.findings);
+      const result = await this.run(target.workspace, target.version, { signal, write }, false);
       write(result.package ? messages.compiled : messages.compileFailed);
       return result.package !== undefined;
     } catch (error) {
       write(error instanceof Error ? error.message : String(error));
-      this.base.report(error);
+      if (!(error instanceof AppError)) {
+        this.base.report(error);
+      }
       return false;
     }
   }
@@ -129,22 +162,26 @@ export class CompileCommands implements vscode.TaskProvider {
     }
   }
 
-  private show(findings: Finding[]): void {
-    for (const file of new Set(findings.map((finding) => finding.file))) {
-      this.audit.set(
+  private show(
+    collection: vscode.DiagnosticCollection,
+    source: string,
+    problems: (Problem & { excepted?: boolean })[],
+  ): void {
+    for (const file of new Set(problems.map((problem) => problem.file))) {
+      collection.set(
         vscode.Uri.file(file),
-        findings
-          .filter((finding) => finding.file === file)
-          .map((finding) => {
-            const line = Math.max(finding.line - 1, 0);
+        problems
+          .filter((problem) => problem.file === file)
+          .map((problem) => {
+            const line = Math.max(problem.line - 1, 0);
             const diagnostic = new vscode.Diagnostic(
               new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER),
-              finding.message,
-              finding.excepted
+              problem.message,
+              problem.excepted
                 ? vscode.DiagnosticSeverity.Warning
                 : vscode.DiagnosticSeverity.Error,
             );
-            diagnostic.source = 'GoEasyERP audit';
+            diagnostic.source = source;
             return diagnostic;
           }),
       );
