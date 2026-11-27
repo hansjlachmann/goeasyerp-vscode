@@ -42,7 +42,8 @@
     "CHANGELOG.md"
   ],
   "activationEvents": [
-    "workspaceContains:**/application.yaml"
+    "workspaceContains:**/application.yaml",
+    "onTaskType:goeasyerp"
   ],
   "extensionDependencies": [
     "golang.go",
@@ -88,9 +89,36 @@
         "category": "GoEasyERP"
       },
       {
+        "command": "goeasyerp.compile",
+        "title": "%command.compile%",
+        "category": "GoEasyERP"
+      },
+      {
+        "command": "goeasyerp.packageApp",
+        "title": "%command.packageApp%",
+        "category": "GoEasyERP"
+      },
+      {
         "command": "goeasyerp.showOutput",
         "title": "%command.showOutput%",
         "category": "GoEasyERP"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "goeasyerp",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "enum": [
+              "compile"
+            ],
+            "description": "%task.compile%"
+          }
+        }
       }
     ]
   },
@@ -109,6 +137,7 @@
     "@types/node": "^22.20.7",
     "@types/vscode": "~1.136.0",
     "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
     "@vscode/vsce": "^4.1.1",
     "esbuild": "^0.28.2",
     "eslint": "^10.15.0",
@@ -120,6 +149,7 @@
   "dependencies": {
     "tar": "^7.5.23",
     "yaml": "^2.9.1",
-    "yauzl": "^3.4.0"
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1"
   }
 }

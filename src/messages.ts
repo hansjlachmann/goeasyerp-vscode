@@ -94,6 +94,16 @@ export const messages = {
   terminalPath: (version: string) =>
     `Adds Go ${version}, which the base is built with, to the PATH.`,
 
+  compileTask: 'Compile',
+  auditing: 'App audit',
+  refused: 'REFUSED',
+  approved: 'approved',
+  packaged: (path: string) => `Package: ${path}`,
+  compiled: 'The app compiled. Nothing was published.',
+  compileFailed: 'The app has errors. See the Problems panel.',
+  packageWritten: (path: string) => `The package is in ${path}.`,
+  reveal: 'Show in File Manager',
+
   confirmRemove: (project: string) => `Remove the container ${project}?`,
   confirmRemoveDetail: 'This deletes its database. It cannot be undone.',
   remove: 'Remove',

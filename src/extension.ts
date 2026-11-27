@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { BaseCommands } from './commands/base';
+import { CompileCommands } from './commands/compile';
 import { ContainerCommands } from './commands/containers';
 import { NewAppCommand } from './commands/newApp';
 import { Docker } from './container/docker';
@@ -31,6 +32,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ...containers.register(),
     new NewAppCommand(manager, context.secrets).register(),
     ...base.register(),
+    ...new CompileCommands(base, run, output).register(),
   );
   // Not awaited: it downloads, and activation must not wait for that.
   void base.activate();

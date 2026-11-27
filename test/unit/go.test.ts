@@ -112,7 +112,12 @@ describe('managed Go', () => {
             stderr: '',
           })
         : noGo(_command, args);
-    const toolchains = new GoToolchains(store, run, fetching(() => sha256), linux);
+    const toolchains = new GoToolchains(
+      store,
+      run,
+      fetching(() => sha256),
+      linux,
+    );
     const first = await toolchains.ensure('1.26.11');
     onPath = true;
 

@@ -8,5 +8,8 @@
   "command.stopContainer": "Stop Local Container",
   "command.removeContainer": "Remove Local Container",
   "command.newApp": "New App",
-  "command.downloadBase": "Download Base"
+  "command.downloadBase": "Download Base",
+  "command.compile": "Compile",
+  "command.packageApp": "Package App",
+  "task.compile": "compile: build, check and package the app on this computer"
 }

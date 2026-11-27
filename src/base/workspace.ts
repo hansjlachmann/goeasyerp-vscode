@@ -5,12 +5,21 @@ import { appDirectory, type App } from '../app/application';
 import type { DownloadOptions } from '../download';
 import { goEnvironment, requiredGoVersion, type GoToolchain } from '../go/toolchain';
 import type { Runner } from '../runner';
+import { definitionsHash } from './definitions';
 import { goWork, requiredBaseVersion, writeGoWork } from './gowork';
 import { AppError, errorMessages, locate } from './problems';
 import { ensureSource, type FetchSource } from './source';
 
 const FOLDER = '.goeasyerp';
 const WORK = `${FOLDER}/work`;
+/** The file of the work copy that names its base version. */
+const MARKER = '.goeasyerp-version';
+
+interface State {
+  version?: string;
+  /** The hash of the app's definitions at the last complete merge. */
+  definitions?: string;
+}
 
 /** What a merge changes in the work copy; each merge starts from the base's own. */
 const MERGED = [
@@ -39,6 +48,8 @@ export interface Toolchains {
 
 /** The base merged with an app, in the app's .goeasyerp folder. */
 export class BaseWorkspace {
+  private last: Promise<unknown> = Promise.resolve();
+
   constructor(
     readonly app: App,
     private readonly toolchains: Toolchains,
@@ -48,37 +59,65 @@ export class BaseWorkspace {
 
   /** The base version used last. */
   async lastVersion(): Promise<string | undefined> {
-    try {
-      const text = await readFile(this.path(FOLDER, 'state.json'), 'utf8');
-      const { version } = JSON.parse(text) as { version?: unknown };
-      return typeof version === 'string' ? version : undefined;
-    } catch {
-      return undefined; // not set up yet, or a damaged file that the next merge replaces
-    }
+    const { version } = await this.state();
+    return typeof version === 'string' ? version : undefined;
   }
 
-  async rememberVersion(version: string): Promise<void> {
-    await mkdir(this.path(FOLDER), { recursive: true });
-    await writeFile(this.path(FOLDER, 'state.json'), `${JSON.stringify({ version })}\n`);
+  /** The work copy: the base merged with the app. */
+  get work(): string {
+    return this.path(WORK);
+  }
+
+  /** Runs one task at a time among those that read or write the work copy. */
+  exclusive<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.last.then(task, task);
+    this.last = result.catch(() => undefined);
+    return result;
+  }
+
+  /** Merges anew, after any other task on the work copy. */
+  sync(version: string, options: SyncOptions = {}): Promise<SyncResult> {
+    return this.exclusive(() => this.merge(version, options));
+  }
+
+  /**
+   * Merges unless the last merge was of this version and the app's definitions are the same.
+   * To be called within exclusive().
+   */
+  async refresh(version: string, options: SyncOptions = {}): Promise<SyncResult> {
+    const state = await this.state();
+    const marker = await readFile(join(this.work, MARKER), 'utf8').catch(() => '');
+    if (
+      state.version !== version ||
+      marker !== version ||
+      state.definitions !== (await definitionsHash(appDirectory(this.app)))
+    ) {
+      return this.merge(version, options);
+    }
+    const goMod = await readFile(this.path(FOLDER, 'base', version, 'go.mod'), 'utf8');
+    const toolchain = await this.toolchains.ensure(requiredGoVersion(goMod), options);
+    return { toolchain, changed: false };
   }
 
   /**
    * Downloads the base of the version, merges the app into a work copy of it, generates the
    * table code and writes the workspace's go.work. Throws AppError for errors in the app.
    */
-  async sync(version: string, options: SyncOptions = {}): Promise<SyncResult> {
+  private async merge(version: string, options: SyncOptions): Promise<SyncResult> {
     const { signal, onPercent, onStep } = options;
     const source = this.path(FOLDER, 'base', version);
     onStep?.('source');
     await ensureSource(source, version, { signal, onPercent }, this.fetchSource);
-    await this.rememberVersion(version);
+    // Without the definitions' hash until the merge is complete: a broken one is repeated.
+    await this.save({ version });
+    const definitions = await definitionsHash(appDirectory(this.app));
 
     onStep?.('go');
     const goMod = await readFile(join(source, 'go.mod'), 'utf8');
     const toolchain = await this.toolchains.ensure(requiredGoVersion(goMod), { signal, onPercent });
 
     const work = this.path(WORK);
-    const marker = join(work, '.goeasyerp-version');
+    const marker = join(work, MARKER);
     const changedVersion = (await readFile(marker, 'utf8').catch(() => '')) !== version;
     if (changedVersion) {
       onStep?.('copy');
@@ -144,7 +183,21 @@ export class BaseWorkspace {
         goWork(this.app.folder, WORK, goLine, required),
       );
     }
+    await this.save({ version, definitions });
     return { toolchain, changed: changedVersion || changedWork };
+  }
+
+  private async state(): Promise<State> {
+    try {
+      return JSON.parse(await readFile(this.path(FOLDER, 'state.json'), 'utf8')) as State;
+    } catch {
+      return {}; // not set up yet, or a damaged file that the next merge replaces
+    }
+  }
+
+  private async save(state: State): Promise<void> {
+    await mkdir(this.path(FOLDER), { recursive: true });
+    await writeFile(this.path(FOLDER, 'state.json'), `${JSON.stringify(state)}\n`);
   }
 
   /**

@@ -3,19 +3,20 @@
  * language server where a name of the base is defined. It needs the network and takes minutes.
  * BASE_VERSION picks the base release.
  */
-import { access, cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { findApp } from '../../src/app/application';
 import { writeApp } from '../../src/app/template';
+import { compile } from '../../src/build/compile';
 import { AppError } from '../../src/base/problems';
 import { BaseWorkspace } from '../../src/base/workspace';
 import { goEnvironment, GoToolchains, type GoToolchain } from '../../src/go/toolchain';
 import { run } from '../../src/runner';
-import { MIN_BASE_VERSION } from '../../src/version';
+import { TESTED_BASE_VERSION } from './version';
 
-const version = process.env.BASE_VERSION ?? MIN_BASE_VERSION;
+const version = process.env.BASE_VERSION ?? TESTED_BASE_VERSION;
 
 const FIELDS = `extends_table: 18
 fields:
@@ -43,6 +44,25 @@ func (customerLogic) OnModify(rec *gtables.Customer) error {
 }
 `;
 
+const PACKAGE_CHECK = `package main
+
+import (
+	"os"
+
+	"github.com/hansjlachmann/goeasyerp/backend/foundation/apps"
+)
+
+func main() {
+	data, err := os.ReadFile(os.Args[1])
+	if err == nil {
+		_, err = apps.ReadPackage(data)
+	}
+	if err != nil {
+		panic(err)
+	}
+}
+`;
+
 describe(`a new app on base ${version}`, () => {
   let temporary: string;
   let root: string;
@@ -50,8 +70,8 @@ describe(`a new app on base ${version}`, () => {
   let toolchain: GoToolchain;
   const options = { onOutput: (text: string) => process.stdout.write(text) };
 
-  const go = async (args: string[], cwd = root) => {
-    const env = goEnvironment(toolchain, process.env, { GOWORK: '' });
+  const go = async (args: string[], cwd = root, work = '') => {
+    const env = goEnvironment(toolchain, process.env, { GOWORK: work });
     const result = await run(join(toolchain.goroot, 'bin/go'), args, { cwd, env });
     expect(result.code, result.stderr).toBe(0);
     return result.stdout;
@@ -147,6 +167,56 @@ describe(`a new app on base ${version}`, () => {
     await go(['build', './...']);
     const customer = join(root, '.goeasyerp/work/backend/generated/tables/customer_gen.go');
     expect(await readFile(customer, 'utf8')).not.toContain('Lp_points');
+  });
+
+  describe('compiling', () => {
+    const lines: string[] = [];
+    const compileApp = () =>
+      compile(workspace, version, run, { write: (text) => lines.push(text) });
+    beforeEach(() => (lines.length = 0));
+
+    it('writes a package the server accepts', async () => {
+      const result = await compileApp();
+      expect(result.findings).toEqual([]);
+      expect(result.package, lines.join('\n')).toBeDefined();
+
+      // the server's own reader of uploaded packages
+      const check = join(workspace.work, 'cmd/zz-package-check');
+      await mkdir(check, { recursive: true });
+      await writeFile(join(check, 'main.go'), PACKAGE_CHECK);
+      await go(['run', './cmd/zz-package-check', result.package!], workspace.work, 'off');
+      await rm(check, { recursive: true });
+    });
+
+    it('reports what the audit refuses, on its line', async () => {
+      await writeFile(
+        join(root, 'register.go'),
+        'package loyalty\n\nimport "os"\n\n// Register reads the environment.\nfunc Register() { _ = os.Args }\n',
+      );
+      const result = await compileApp();
+      expect(result.package).toBeUndefined();
+      expect(result.findings).toContainEqual(
+        expect.objectContaining({ file: join(root, 'register.go'), line: 3, excepted: false }),
+      );
+    });
+
+    it("reports Go's errors with their place", async () => {
+      await writeFile(
+        join(root, 'register.go'),
+        'package loyalty\n\n// Register does not compile.\nfunc Register() { missing() }\n',
+      );
+      expect((await compileApp()).package).toBeUndefined();
+      expect(lines.join('\n')).toMatch(/^register\.go:4:19: undefined: missing$/m);
+    });
+
+    it("reports go vet's findings", async () => {
+      await writeFile(
+        join(root, 'register.go'),
+        'package loyalty\n\nimport "fmt"\n\n// Register prints wrongly.\nfunc Register() { fmt.Printf("%d", "x") }\n',
+      );
+      expect((await compileApp()).package).toBeUndefined();
+      expect(lines.join('\n')).toMatch(/register\.go:6:\d+: .*Printf/);
+    });
   });
 
   it("merges the base's test app in an extensions folder", async () => {

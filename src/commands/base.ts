@@ -3,7 +3,12 @@ import * as vscode from 'vscode';
 import { appDirectory, findApp } from '../app/application';
 import { launchServer } from '../base/launch';
 import { AppError, type Problem } from '../base/problems';
-import { BaseWorkspace, type SyncOptions, type Toolchains } from '../base/workspace';
+import {
+  BaseWorkspace,
+  type SyncOptions,
+  type SyncResult,
+  type Toolchains,
+} from '../base/workspace';
 import { fetchVersions } from '../container/releases';
 import type { GoToolchain } from '../go/toolchain';
 import { messages } from '../messages';
@@ -70,8 +75,28 @@ export class BaseCommands implements vscode.Disposable {
     await this.sync(workspace, true);
   }
 
+  /** What a compile needs: the app's workspace and the base version it is built against. */
+  async target(): Promise<{ workspace: BaseWorkspace; version: string } | undefined> {
+    const workspace = await this.open();
+    if (!workspace) {
+      void vscode.window.showInformationMessage(messages.noApp);
+      return undefined;
+    }
+    const version = await this.version(workspace, false);
+    return version ? { workspace, version } : undefined;
+  }
+
+  /** Puts a merge's result to use in the editor. */
+  async apply(workspace: BaseWorkspace, result: SyncResult): Promise<void> {
+    this.diagnostics.clear();
+    await this.useToolchain(workspace, result.toolchain);
+    if (result.changed) {
+      await vscode.commands.executeCommand('go.languageserver.restart').then(undefined, () => {});
+    }
+  }
+
   /** The first app among the workspace's folders; its files are watched from then on. */
-  private async open(): Promise<BaseWorkspace | undefined> {
+  async open(): Promise<BaseWorkspace | undefined> {
     if (this.workspace) {
       return this.workspace;
     }
@@ -135,13 +160,7 @@ export class BaseCommands implements vscode.Disposable {
             return workspace.sync(version, this.progress(progress, abort.signal));
           },
         );
-        this.diagnostics.clear();
-        await this.useToolchain(workspace, result.toolchain);
-        if (result.changed) {
-          await vscode.commands
-            .executeCommand('go.languageserver.restart')
-            .then(undefined, () => {});
-        }
+        await this.apply(workspace, result);
         this.output.appendLine(messages.baseReady(version));
       } catch (error) {
         this.report(error);
@@ -234,7 +253,8 @@ export class BaseCommands implements vscode.Disposable {
     }
   }
 
-  private report(error: unknown): void {
+  /** Shows a failed merge: the app's errors in the Problems panel. */
+  report(error: unknown): void {
     if (error instanceof Error && error.name === 'AbortError') {
       return;
     }

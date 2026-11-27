@@ -14,9 +14,9 @@ import { findFreePort } from '../../src/container/ports';
 import { ContainerStore, type Container } from '../../src/container/store';
 import { run } from '../../src/runner';
 import { ServerClient } from '../../src/server/client';
-import { MIN_BASE_VERSION } from '../../src/version';
+import { TESTED_BASE_VERSION } from './version';
 
-const version = process.env.BASE_VERSION ?? MIN_BASE_VERSION;
+const version = process.env.BASE_VERSION ?? TESTED_BASE_VERSION;
 const password = `Pw-${randomBytes(16).toString('hex')}`;
 const progress = { onOutput: (text: string) => process.stdout.write(text) };
 
