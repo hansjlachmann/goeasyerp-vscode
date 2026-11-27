@@ -56,6 +56,24 @@ all three out of your repository.
 All commands start with **GoEasyERP:** in the Command Palette. The status bar shows the server of
 the selected launch configuration and its state.
 
+## Snippets
+
+Type the start of a name in a file of your app and press **Ctrl+Space**. The snippets fill in
+your app's prefix and the next free numbers.
+
+| Snippet | In | Writes |
+|---|---|---|
+| `ge-table` | `custom/tables/` | A table of your own |
+| `ge-tableext` | `tables/` | Fields on a base table |
+| `ge-list`, `ge-card` | `custom/pages/` | A list or card page |
+| `ge-pageext` | `pages/` | Fields, a section and a button on a base page |
+| `ge-menu` | `menus/` | A main menu entry |
+| `ge-texts` | `translations/` | Texts in one language |
+| `ge-register` | Go files | The `Register` function |
+| `ge-tablelogic` | Go files | A table's triggers |
+| `ge-function` | Go files | A function for a page's button |
+| `ge-subscribe` | Go files | Logic that runs after a sales posting |
+
 ## launch.json
 
 ```json

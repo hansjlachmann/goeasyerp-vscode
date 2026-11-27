@@ -21,6 +21,7 @@ import { AuditRefused, ServerClient } from '../server/client';
 import { compareVersions, isVersion, MIN_BASE_VERSION } from '../version';
 import type { BaseCommands } from './base';
 import type { CompileCommands } from './compile';
+import { pickConfiguration, type ServerStatus } from './server';
 
 const TYPE = 'goeasyerp';
 
@@ -41,6 +42,7 @@ export class PublishCommands
     private readonly compiler: CompileCommands,
     private readonly secrets: vscode.SecretStorage,
     private readonly output: vscode.OutputChannel,
+    private readonly status: ServerStatus,
   ) {}
 
   register(): vscode.Disposable[] {
@@ -93,6 +95,7 @@ export class PublishCommands
   ): Promise<void> {
     await this.run(signal, async (workspace, report, abort) => {
       const target = readTarget(configuration);
+      this.status.publishing(target.server);
       await vscode.workspace.saveAll(false);
       this.output.clear();
       this.output.show(true);
@@ -114,7 +117,7 @@ export class PublishCommands
       const zip = await readFile(result.package);
       let build: number;
       try {
-        build = await publishPackage(session, client, zip, this.follow(report, abort));
+        build = await publishPackage(session, client, zip, this.follow(target, report, abort));
       } catch (error) {
         if (error instanceof AuditRefused) {
           this.showFindings(workspace, error);
@@ -133,7 +136,7 @@ export class PublishCommands
   }
 
   private async unpublish(): Promise<void> {
-    const configuration = await this.pickConfiguration();
+    const configuration = await pickConfiguration(messages.pickConfiguration);
     if (!configuration) {
       return;
     }
@@ -161,7 +164,13 @@ export class PublishCommands
       this.output.show(true);
       report(messages.connecting(target.server));
       const { client, session } = await this.connect(target, abort);
-      const build = await unpublishApp(session, client, application.id, this.follow(report, abort));
+      this.status.publishing(target.server);
+      const build = await unpublishApp(
+        session,
+        client,
+        application.id,
+        this.follow(target, report, abort),
+      );
       const done = messages.unpublished(name, build);
       this.output.appendLine(done);
       this.showInfo(done, startPage(target));
@@ -213,6 +222,7 @@ export class PublishCommands
       }
     } finally {
       this.busy = false;
+      void this.status.published();
     }
   }
 
@@ -251,11 +261,18 @@ export class PublishCommands
     return password || undefined;
   }
 
-  private follow(report: (step: string) => void, signal: AbortSignal): FollowOptions {
+  private follow(
+    target: Target,
+    report: (step: string) => void,
+    signal: AbortSignal,
+  ): FollowOptions {
     return {
       signal,
       onLog: (text) => this.output.append(text),
-      onStep: (step) => report(messages.building(step)),
+      onStep: (step) => {
+        report(messages.building(step));
+        this.status.publishing(target.server, step);
+      },
     };
   }
 
@@ -271,28 +288,6 @@ export class PublishCommands
       this.output.appendLine(`${finding.file}, line ${finding.line}: ${finding.message}`);
     }
     this.compiler.showFindings(findings);
-  }
-
-  private async pickConfiguration(): Promise<vscode.DebugConfiguration | undefined> {
-    const folders = vscode.workspace.workspaceFolders ?? [];
-    const configurations = folders.flatMap((folder) =>
-      vscode.workspace
-        .getConfiguration('launch', folder.uri)
-        .get<vscode.DebugConfiguration[]>('configurations', [])
-        .filter((configuration) => configuration.type === TYPE),
-    );
-    if (configurations.length <= 1) {
-      return configurations[0] ?? { ...DEFAULT_CONFIGURATION };
-    }
-    const picked = await vscode.window.showQuickPick(
-      configurations.map((configuration) => ({
-        label: configuration.name,
-        description: String(configuration.server),
-        configuration,
-      })),
-      { placeHolder: messages.pickConfiguration },
-    );
-    return picked?.configuration;
   }
 
   private showInfo(text: string, page: string): void {

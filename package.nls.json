@@ -20,5 +20,8 @@
   "launch.openBrowser": "Whether F5 opens the browser.",
   "launch.schemaUpdateMode": "synchronize adds new tables and fields. recreate is not available yet.",
   "debugger.label": "GoEasyERP",
-  "debugger.snippet": "Publish the app to a GoEasyERP development server."
+  "debugger.snippet": "Publish the app to a GoEasyERP development server.",
+  "command.nextObjectNo": "Next Free Object No.",
+  "command.nextFieldNo": "Next Free Field No.",
+  "command.openBrowser": "Open in Browser"
 }

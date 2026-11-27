@@ -128,6 +128,15 @@ export const messages = {
   pickConfiguration: 'Server to unpublish from',
   openBrowser: 'Open in Browser',
 
+  offline: 'offline',
+  runningBuild: (build: number) => `running build ${build}`,
+  statusTooltip: 'GoEasyERP: show the output',
+  pickToOpen: 'Server to open in the browser',
+  noEditor: 'Open a file and place the cursor where the number belongs.',
+  seriesFull: "The app's number series has no free number left.",
+  pickObjectType: 'Type of the new object',
+  objectType: { table: 'Table', page: 'Page', report: 'Report', codeunit: 'Routine' },
+
   confirmRemove: (project: string) => `Remove the container ${project}?`,
   confirmRemoveDetail: 'This deletes its database. It cannot be undone.',
   remove: 'Remove',

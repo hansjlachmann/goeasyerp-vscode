@@ -14,6 +14,7 @@ import { AppError } from '../../src/base/problems';
 import { BaseWorkspace } from '../../src/base/workspace';
 import { goEnvironment, GoToolchains, type GoToolchain } from '../../src/go/toolchain';
 import { run } from '../../src/runner';
+import { expand, missingImports, SNIPPETS } from '../../src/snippets/snippets';
 import { TESTED_BASE_VERSION } from './version';
 
 const version = process.env.BASE_VERSION ?? TESTED_BASE_VERSION;
@@ -217,6 +218,64 @@ describe(`a new app on base ${version}`, () => {
       expect((await compileApp()).package).toBeUndefined();
       expect(lines.join('\n')).toMatch(/register\.go:6:\d+: .*Printf/);
     });
+  });
+
+  it('compiles every snippet with its proposals', async () => {
+    const app = join(temporary, 'snippets');
+    await writeApp(app, {
+      name: 'Snippets',
+      publisher: 'Tests',
+      contact: 'https://example.com',
+      prefix: 'sn',
+      baseVersion: version,
+      series: { from: 50000, to: 50099 },
+    });
+    const context = { prefix: 'sn', table: 50000, page: 50000, field: 50000 };
+    const text = (name: string, change: Partial<typeof context> = {}) =>
+      expand(SNIPPETS.find((s) => s.name === name)!.body({ ...context, ...change }));
+    const put = (path: string, content: string) => writeFile(join(app, path), content);
+
+    await put('custom/tables/50000-sn-group.yaml', text('ge-table'));
+    // The table extension's fields are those the page extension shows.
+    await put('tables/18-customer.extend.yaml', text('ge-tableext', { field: 50010 }));
+    await put(
+      'tables/18-customer-status.extend.yaml',
+      text('ge-tableext', { field: 50011 }).replaceAll('sn_points', 'sn_status'),
+    );
+    await put('custom/pages/50000-sn-groups.yaml', text('ge-list'));
+    await put('custom/pages/50001-sn-group-card.yaml', text('ge-card', { page: 50001 }));
+    await put('pages/21-customer-card.extend.yaml', text('ge-pageext'));
+    await put('menus/admin.extend.yaml', text('ge-menu'));
+    for (const language of ['en-US', 'nb-NO', 'da-DK']) {
+      await put(`translations/${language}/tables.yaml`, text('ge-texts'));
+    }
+
+    const go = SNIPPETS.filter((snippet) => snippet.where === 'go');
+    let code = 'package snippets\n';
+    for (const snippet of go) {
+      const imports = missingImports(code, snippet.imports ?? []);
+      if (imports) {
+        const rows = code.split('\n');
+        rows.splice(imports.line, 0, imports.text);
+        code = rows.join('\n');
+      }
+      code += `\n${text(snippet.name)}`;
+    }
+    code = code.replace(
+      'func Register() {\n\t\n}',
+      `func Register() {
+	gtables.RegisterCustomerLogic(customerLogic{})
+	registerReset()
+	salesposting.OnAfterPost.Subscribe(afterSalesPost)
+}`,
+    );
+    await put('register.go', code);
+
+    const lines: string[] = [];
+    const toolchains = new GoToolchains(join(temporary, 'go'), run);
+    const own = new BaseWorkspace({ root: app, folder: '.' }, toolchains, run);
+    const result = await compile(own, version, run, { write: (line) => lines.push(line) });
+    expect(result.package, lines.join('\n')).toBeDefined();
   });
 
   it("merges the base's test app in an extensions folder", async () => {

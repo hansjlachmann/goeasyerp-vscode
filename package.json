@@ -106,6 +106,21 @@
         "category": "GoEasyERP"
       },
       {
+        "command": "goeasyerp.nextObjectNo",
+        "title": "%command.nextObjectNo%",
+        "category": "GoEasyERP"
+      },
+      {
+        "command": "goeasyerp.nextFieldNo",
+        "title": "%command.nextFieldNo%",
+        "category": "GoEasyERP"
+      },
+      {
+        "command": "goeasyerp.openBrowser",
+        "title": "%command.openBrowser%",
+        "category": "GoEasyERP"
+      },
+      {
         "command": "goeasyerp.showOutput",
         "title": "%command.showOutput%",
         "category": "GoEasyERP"

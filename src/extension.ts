@@ -3,8 +3,10 @@ import * as vscode from 'vscode';
 import { BaseCommands } from './commands/base';
 import { CompileCommands } from './commands/compile';
 import { ContainerCommands } from './commands/containers';
+import { EditingCommands } from './commands/editing';
 import { NewAppCommand } from './commands/newApp';
 import { PublishCommands } from './commands/publish';
+import { ServerStatus } from './commands/server';
 import { Docker } from './container/docker';
 import { ContainerManager } from './container/manager';
 import { ContainerStore } from './container/store';
@@ -29,6 +31,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const compiler = new CompileCommands(base, run, output);
 
+  const status = new ServerStatus(base);
+
   context.subscriptions.push(
     output,
     vscode.commands.registerCommand('goeasyerp.showOutput', () => output.show()),
@@ -36,8 +40,11 @@ export function activate(context: vscode.ExtensionContext): void {
     new NewAppCommand(manager, context.secrets).register(),
     ...base.register(),
     ...compiler.register(),
-    ...new PublishCommands(base, compiler, context.secrets, output).register(),
+    ...new PublishCommands(base, compiler, context.secrets, output, status).register(),
+    ...status.register(),
+    ...new EditingCommands(base).register(),
   );
   // Not awaited: it downloads, and activation must not wait for that.
   void base.activate();
+  void status.start();
 }
