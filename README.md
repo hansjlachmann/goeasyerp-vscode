@@ -1,20 +1,28 @@
 # GoEasyERP
 
+[GoEasyERP](https://github.com/hansjlachmann/goeasyerp) is a free, open-source Business
+Application, an ERP system for small businesses: finance, sales, purchasing, inventory, projects
+and fixed assets in one system. It runs in containers, on Docker or Kubernetes, has minimal
+hardware requirements, and is published under the MIT open-source licence.
+
+## The extension
+
 Write a GoEasyERP **extension app** in VS Code, compile it with **Ctrl+Shift+B**, and publish it
 with **F5** to GoEasyERP running in a local Docker container. The new code is live in the browser
 seconds later.
 
-> **In development.** This extension is not yet released, and most of what is described below is
-> still being built.
-
-An extension app adds to [GoEasyERP](https://github.com/hansjlachmann/goeasyerp) without changing
-it: new tables and pages, fields on the base application's tables, fields, columns and buttons on
-its pages, entries in the main menu, texts, and business logic written in Go.
+An extension app adds to GoEasyERP without changing it: new tables and pages, fields on the base
+application's tables, fields, columns and buttons on its pages, entries in the main menu, texts,
+and business logic written in Go.
 
 ## Requirements
 
 - Visual Studio Code 1.136 or newer.
-- Docker: Docker Desktop on Windows and macOS, Docker Engine with Compose on Linux.
+- Docker: Docker Desktop on Windows and macOS, Docker Engine with Compose on Linux. So far the
+  extension is tested on Linux only.
+- On Windows: Docker Desktop with **WSL 2**, running Linux containers.
+- GoEasyERP 0.1.194 or newer, running as a development server. **Create Local Container** sets
+  one up.
 
 You do not need to install Go. The extension provides the version the base application uses,
 without administrator rights and without changing a Go installation you already have.
@@ -30,8 +38,8 @@ installed together with this one.
 3. Add a field to the Customer table and show it on the Customer Card.
 4. Press **F5**. The browser opens, and the field is on the Customer Card.
 
-The first publish to a new container takes about two minutes. After that, a change of the app's
-code is live in about 15 seconds.
+The first publish takes a few minutes, while the extension downloads Go and the base
+application. After that, a change of the app's code is typically live in about half a minute.
 
 In the app's folder the extension keeps its downloads in `.goeasyerp/`, writes `go.work`, and,
 when it provides Go, sets `go.goroot` in the workspace settings. A new app's `.gitignore` leaves
@@ -113,6 +121,8 @@ released version, with Install App or Upload App.
 ## Privacy
 
 - Your app is sent to the server of your launch configuration, and nowhere else.
+- Your password goes to that server only. Use `https` for a server on another computer: over
+  `http` the password and the app travel unencrypted.
 - The extension downloads the base application from GitHub, its container images from the
   registries the base application names, and Go from go.dev. Go may download the modules your app
   and the base application require.
