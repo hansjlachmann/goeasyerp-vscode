@@ -32,6 +32,9 @@ installed together with this one.
 
 ## Getting started
 
+For a guide with screenshots, see
+[How to set up the VS Code GoEasyERP extension](https://goeasyerp.org/docs/vscode-extension/).
+
 1. Run **GoEasyERP: Create Local Container**. The first start takes a few minutes.
 2. Run **GoEasyERP: New App** and open the app's folder.
 3. Add a field to the Customer table and show it on the Customer Card.
