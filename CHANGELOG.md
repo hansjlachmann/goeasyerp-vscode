@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/hansjlachmann/goeasyerp-vscode/compare/goeasyerp-v0.1.1...goeasyerp-v0.1.2) (2026-11-28)
+
+
+### Documentation
+
+* link the setup guide ([0834bc6](https://github.com/hansjlachmann/goeasyerp-vscode/commit/0834bc6c330d0ef90ffb95fc21a9d9b39de59b01))
+
 ## [0.1.1](https://github.com/hansjlachmann/goeasyerp-vscode/compare/goeasyerp-v0.1.0...goeasyerp-v0.1.1) (2026-11-28)
 
 
