@@ -18,8 +18,7 @@ and business logic written in Go.
 ## Requirements
 
 - Visual Studio Code 1.136 or newer.
-- Docker: Docker Desktop on Windows and macOS, Docker Engine with Compose on Linux. So far the
-  extension is tested on Linux only.
+- Docker: Docker Desktop on Windows and macOS, Docker Engine with Compose on Linux.
 - On Windows: Docker Desktop with **WSL 2**, running Linux containers.
 - GoEasyERP 0.1.194 or newer, running as a development server. **Create Local Container** sets
   one up.
