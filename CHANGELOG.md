@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/hansjlachmann/goeasyerp-vscode/compare/goeasyerp-v0.1.0...goeasyerp-v0.1.1) (2026-11-28)
+
+
+### Documentation
+
+* remove the tested platforms note ([d6f5e28](https://github.com/hansjlachmann/goeasyerp-vscode/commit/d6f5e28a804a2e4c0102efbe6ec5f17a8a1d897c))
+
 ## 0.1.0 (2026-11-28)
 
 
