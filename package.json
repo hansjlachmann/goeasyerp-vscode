@@ -2,7 +2,7 @@
   "name": "goeasyerp",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "publisher": "erp-development",
   "author": "ERP Development AS",
   "license": "MIT",
